@@ -161,13 +161,29 @@ void loop()
       float Latitud;
       float eLongitud;
       float eLatitud;
+      float eKmLong;
+      float eKmLat;
+      float epercLong;
+      float epercLat;
       Beta = anioFrac(xdias);
       Delta = sunDeclination(Beta);
       angularss = angularSunset(ss,midDay);
       Longitud = cLongitud(midDay);
       Latitud = cLatitud(Delta, angularss);
-      eLongitud= errorLongitud(Longitud, LongitudReal);
-      eLatitud= errorLongitud(Latitud, LatitudReal);
+      eLongitud= errordegreesLongitud(Longitud, LongitudReal);
+      eLatitud= errordegreesLongitud(Latitud, LatitudReal);
+      eKmLong=errorKmLong(eLongitud);
+      eKmLat=errorKmLat(eLatitud);
+      epercLong=errorpercentLong(eLongitud);
+      epercLat=errorpercentLat(eLatitud);
+      dataFile.print(Beta);
+      dataFile.print("  "); 
+      dataFile.print(Delta);
+      dataFile.print("  ");
+      dataFile.println(angularss); 
+      dataFile.print(sr);
+      dataFile.print("  "); 
+      dataFile.println(ss);
       dataFile.print("Longitud y latitud reales:  "); 
       dataFile.print(LongitudReal); 
       dataFile.print("  "); 
@@ -175,22 +191,49 @@ void loop()
       dataFile.print(Longitud); 
       dataFile.print("  "); 
       dataFile.println(Latitud);
+      dataFile.print("Errores por orden, gradosLong gradosLat, KmLong KmLat, %Long %Lat:");
       dataFile.print(eLongitud);
-      dataFile.print("  "); 
-      dataFile.println(eLatitud);     
+      dataFile.print(" "); 
+      dataFile.print(eLatitud); 
+      dataFile.print(" ");   
+      dataFile.print(eKmLong);
+      dataFile.print(" "); 
+      dataFile.print(eKmLat); 
+      dataFile.print(" ");   
+      dataFile.print(epercLong);
+      dataFile.print(" "); 
+      dataFile.println(epercLat);   
       dataFile.print(dia); 
       dataFile.print("  ");  
       dataFile.print(mes);  
       dataFile.print("  ");  
       dataFile.println(anio);
+      dataFile.print(hora_dec); 
+      dataFile.print("  ");  
+      dataFile.println(sensorval); 
       dataFile.close();
     }
   else
     {Serial.println("Escritura erronea...");}
  }
-
+ else
+ {filename=filename+cont+ext;
+  filename.toCharArray(myfile,17);
+  File dataFile=SD.open(myfile, FILE_WRITE);
+  if(dataFile)
+   {dataFile.print(hora_dec); 
+    dataFile.print("  ");  
+    dataFile.println(sensorval);  
+    Serial.print(hora_dec);
+    Serial.print("  ");
+    Serial.println(sensorval);
+    dataFile.close();
+    }
+  else
+   {Serial.println("Escritura Erronea...");}
+}
  delay(2000);
-} 
+}
 
 
 
@@ -235,20 +278,44 @@ float angularSunset(const float sunset, const float mDay){
 }
 
 /*A continuacion las funciones para el calculo del error de longitud y de latitud
-en porcentaje*/
+en grados, en kilometros y en porcentaje*/
 
-float errorLongitud(float Long, float LongReal){
+float errordegreesLongitud(float Long, float LongReal){
   float error;
-  error=(LongReal-Long)/360;
+  error=LongReal-Long;
+  return error*100;
+}
+float errordegreesLatitud(float Lat, float LatReal){
+  float error;
+  error=LatReal-Lat;
   return error*100;
 }
 
-float errorLatitud(float Lat, float LatReal){
+float errorKmLong(float errordegreesLongitud){
   float error;
-  error=(LatReal-Lat)/180;
-  return error*100;
+  error=errordegreesLongitud*111,11;
+  return error;
 }
- /*Funcion que retorna si el año introducido es bisiesto*/
+
+float errorKmLat(float errordegreesLatitud){
+  float error;
+  error=errordegreesLatitud*111,11;
+  return error;
+}
+
+float errorpercentLong(float errordegreesLongitud){
+  float error;
+  error=(errordegreesLongitud/360)*100;
+  return error;
+}
+
+float errorpercentLat(float errordegreesLatitud){
+  float error;
+  error=(errordegreesLatitud/180)*100;
+  return error;
+}
+
+/*Funcion que retorna si el año introducido es bisiesto*/
 
 int bisiesto(int anno){           
   
