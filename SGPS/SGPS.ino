@@ -92,18 +92,19 @@ void loop()
   float epercLong;
   float epercLat;
   DateTime now = RTC.now();
-  anio = now.year();           //Obtencion de la fecha y hora del RTC
+  anio = now.year();                             //Obtencion de la fecha y hora del RTC
   mes = now.month();
   dia = now.day();
   hora = now.hour();
   minuto = now.minute();     
-  min_dec = (minuto/60);          //Se convierte la hora a decimal, se necesita asi para introducirla en el modelo celestial.
+  min_dec = (minuto/60);                        //Se convierte la hora a decimal, se necesita asi para introducirla en el modelo celestial.
   hora = hora-UTC;
   if(hora<0)
   {
     hora=hora+24;
   }
   hora_dec = hora+min_dec;
+  float media=0;
   int xdias = dia;
   int f;
   contmes=mes;
@@ -113,73 +114,42 @@ void loop()
       f=dias_de_mes(contmes,anio);
       xdias=xdias + f;
     }
-  if(hora_dec!=0.00)
-   { int ascendente=0;
-     int descendente=0; 
-     for(int j=0; j=4; j++) 
-     {float media=0;  
-       for(int sampleT = 1 ; sampleT<=3 ; sampleT++) 
-        {
-         sensorval = analogRead(sensorReading);               //se obtiene valor del sensor
-         sensorval= (sensorval*5)/1024;
-         media=media+sensorval/3;                         //Se toman datos cada 20 segundos, 3 datos cada hora, asi                                                    
-         delay(20000);                                      //hago la media de esos tres y obtengo un valor medio/minut
-        }
-       samples[j]=sensorval; 
-      }
-      
-    for(int i=4; i=1; i--)
-     { 
-        if(samples[i]>samples[i-1])
-        {ascendente++;}
-        else if(samples[i]<samples[i-1])
-        {descendente++;}
-      }
-    if(ascendente==4)
-      {if(sensorval>=light_sr)
-          {cuenta++;
-           if(cuenta==1)
-           {sr=hora_dec;}
-          }  
-      }
-    if(descendente==4)
-     {if(sensorval<=light_ss)
-        {cuenta2++;
-         if(cuenta2==1)
-         {ss=hora_dec;}
-        }
-      }  
-    midDay=(sr+ss)/2;
-    if (sr>=ss)                                  //Si es un dia fraccionado
-     midDay=midDay+12;
-    if (midDay>=24)
-     midDay=midDay%24;
-
-    filename=filename+cont+ext;
-    filename.toCharArray(myfile,17);
-    File dataFile=SD.open(myfile, FILE_WRITE);    //Se abre la tarjeta SD para guardar todos los datos
-    if(dataFile)
-     {dataFile.print(hora_dec); 
-      dataFile.print("  ");  
-      dataFile.println(sensorval);  
-      Serial.print(hora_dec);
-      Serial.print("  ");
-      Serial.println(sensorval);
-      dataFile.close();
+   for(int sampleT = 1 ; sampleT<=3 ; sampleT++) 
+  {
+   sensorval = analogRead(sensorReading);                     //se obtiene valor del sensor
+   sensorval= (sensorval*5)/1024;
+   media=media+sensorval/3;                                   //Se toman datos cada 20 segundos, 3 datos cada hora, asi                                                    
+   delay(20000);                                              //se hace la media de esos tres y obtengo un valor medio/minut
+  }
+   
+  if(sensorval>=light_sr)
+     {cuenta++;
+      if(cuenta==1)
+        {sr=hora_dec;}
      }
-    else
-     {Serial.println("Escritura Erronea...");} 
-   }
-  else
-   {filename="generic";
-    ext=".txt";
-    cont++;
-    cuenta=0;
-    cuenta2=0;
-    filename=filename+cont+ext;                  //Gracias a este contador, se crear´ un archivo nuevo, numerado, cada nuevo dia que pase
-    filename.toCharArray(myfile,17);
-    File dataFile=SD.open(myfile, FILE_WRITE);   
-    if(dataFile)
+ if(hora_dec>12.00)
+   {if(sensorval<=light_sr)
+     {cuenta2++;
+      if(cuenta2==1)
+        {ss=hora_dec;}
+     }
+   }  
+  int midDay=(sr+ss)/2;
+  if (sr>=ss)                                                //Si es un dia fraccionado
+   midDay=midDay+12;
+  if (midDay>=24)
+   midDay=midDay%24;
+
+ filename="generic";
+ ext=".txt";
+ if(hora_dec==0.00)
+ {cont++;
+  cuenta=0;
+  cuenta2=0;
+  filename=filename+cont+ext;
+  filename.toCharArray(myfile,17);
+  File dataFile=SD.open(myfile, FILE_WRITE);                //Se abre la tarjeta SD para guardar todos los datos
+  if(dataFile)
      {
       Beta = anioFrac(xdias);
       Delta = sunDeclination(Beta);
@@ -207,33 +177,41 @@ void loop()
       dataFile.print(Longitud); 
       dataFile.print("  "); 
       dataFile.println(Latitud);
-      dataFile.print("Errores por orden, gradosLong gradosLat, KmLong KmLat, %Long %Lat:");
-      dataFile.print(eLongitud);
-      dataFile.print(" "); 
-      dataFile.print(eLatitud); 
-      dataFile.print(" ");   
-      dataFile.print(eKmLong);
-      dataFile.print(" "); 
-      dataFile.print(eKmLat); 
-      dataFile.print(" ");   
-      dataFile.print(epercLong);
-      dataFile.print(" "); 
-      dataFile.println(epercLat);   
+       dataFile.print(eLongitud);
+      dataFile.print("  "); 
+      dataFile.println(eLatitud);   
       dataFile.print(dia); 
       dataFile.print("  ");  
       dataFile.print(mes);  
       dataFile.print("  ");  
       dataFile.println(anio);
-      dataFile.print(hora_dec); 
+      dataFile.print(hora_dec);
       dataFile.print("  ");  
-      dataFile.println(sensorval); 
+      dataFile.print(sensorval);
       dataFile.close();
     }
   else
     {Serial.println("Escritura erronea...");}
-  }
- delay(2000);
-}
+ }
+ else
+ {filename=filename+cont+ext;
+  filename.toCharArray(myfile,17);
+  File dataFile=SD.open(myfile, FILE_WRITE);
+  if(dataFile)
+   {dataFile.print(hora_dec); 
+    dataFile.print("  ");  
+    dataFile.println(sensorval);  
+    Serial.print(hora_dec);
+    Serial.print("  ");
+    Serial.println(sensorval);
+    dataFile.close();
+    }
+  else
+   {Serial.println("Escritura Erronea...");}
+ }
+  delay(2000);
+} 
+
 
 float anioFrac(const unsigned int ndias){
    return 2*M_PI/365*(ndias);
@@ -270,6 +248,7 @@ float sunDeclination(const float beta){
   return 0.006918f-0.399912f*cos(beta)+0.070257f*sin(beta)-0.006758f*cos(beta*2)+0.000907f*sin(beta*2)-0.002697f*cos(beta*3)+0.00148f*sin(beta*3);
 }
    
+/*Se obtiene la puesta de sol angular*/
 
 float angularSunset(const float sunset, const float mDay){
   return M_PI/12*fabs(sunset-mDay);
