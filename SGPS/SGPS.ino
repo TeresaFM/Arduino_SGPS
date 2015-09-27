@@ -44,12 +44,12 @@ int dia;
 int fecha;
 int UTC = 2;         //En España zona horaria es UTC+2
 int contmes;
-
+int midDay=0;
 float minuto=0;      
 float hora=0;
 float min_dec;
 float hora_dec;
-
+int samples[]={0, 0, 0, 0};
 int cuenta=0;
 int cuenta2=0;
 float anterior1=0;
@@ -61,12 +61,6 @@ float light_sr=0.85;
 float light_ss=0.10;
 float sr=0;
 float ss=0;
-
-float hora_SR=0;
-float minuto_SR=0;
-float hora_SS=0;
-float minuto_SS=0;
-
 
 
 void setup(){
@@ -86,7 +80,17 @@ void setup(){
 }
 void loop()
 {
-  
+  float Beta;
+  float Delta;
+  float angularss;
+  float Longitud;
+  float Latitud;
+  float eLongitud;
+  float eLatitud;
+  float eKmLong;
+  float eKmLat;
+  float epercLong;
+  float epercLat;
   DateTime now = RTC.now();
   anio = now.year();           //Obtencion de la fecha y hora del RTC
   mes = now.month();
@@ -100,7 +104,6 @@ void loop()
     hora=hora+24;
   }
   hora_dec = hora+min_dec;
-  float media=0;
   int xdias = dia;
   int f;
   contmes=mes;
@@ -110,61 +113,74 @@ void loop()
       f=dias_de_mes(contmes,anio);
       xdias=xdias + f;
     }
-    
-  for(int sampleT = 1 ; sampleT<=3 ; sampleT++) 
-  {
-   sensorval = analogRead(sensorReading);               //se obtiene valor del sensor
-   sensorval= (sensorval*5)/1024;
-   media=media+sensorval/3;                         //Se toman datos cada 20 segundos, 3 datos cada hora, asi                                                    
-   delay(20000);                                      //hago la media de esos tres y obtengo un valor medio/minut
-  }
-   
- anterior1=sensorval;
- anterior2=anterior1;
- anterior3=anterior2;
- anterior4=anterior3;
- if(sensorval>anterior1&&anterior1>anterior2&&anterior2>anterior3&&anterior3>anterior4)
-   {if(sensorval>=light_sr)
-     {cuenta++;
-      if(cuenta==1)
-        {sr=hora_dec;}
-     }
-   }
- if(sensorval<anterior1&&anterior1<anterior2&&anterior2<anterior3&&anterior3<anterior4)
-   {if(sensorval<=light_sr)
-     {cuenta2++;
-      if(cuenta2==1)
-        {ss=hora_dec;}
-     }
-   }  
-  int midDay=(sr+ss)/2;
-  if (sr>=ss)                                  //Si es un dia fraccionado
-   midDay=midDay+12;
-  if (midDay>=24)
-   midDay=midDay%24;
+  if(hora_dec!=0.00)
+   { int ascendente=0;
+     int descendente=0; 
+     for(int j=0; j=4; j++) 
+     {float media=0;  
+       for(int sampleT = 1 ; sampleT<=3 ; sampleT++) 
+        {
+         sensorval = analogRead(sensorReading);               //se obtiene valor del sensor
+         sensorval= (sensorval*5)/1024;
+         media=media+sensorval/3;                         //Se toman datos cada 20 segundos, 3 datos cada hora, asi                                                    
+         delay(20000);                                      //hago la media de esos tres y obtengo un valor medio/minut
+        }
+       samples[j]=sensorval; 
+      }
+      
+    for(int i=4; i=1; i--)
+     { 
+        if(samples[i]>samples[i-1])
+        {ascendente++;}
+        else if(samples[i]<samples[i-1])
+        {descendente++;}
+      }
+    if(ascendente==4)
+      {if(sensorval>=light_sr)
+          {cuenta++;
+           if(cuenta==1)
+           {sr=hora_dec;}
+          }  
+      }
+    if(descendente==4)
+     {if(sensorval<=light_ss)
+        {cuenta2++;
+         if(cuenta2==1)
+         {ss=hora_dec;}
+        }
+      }  
+    midDay=(sr+ss)/2;
+    if (sr>=ss)                                  //Si es un dia fraccionado
+     midDay=midDay+12;
+    if (midDay>=24)
+     midDay=midDay%24;
 
- filename="generic";
- ext=".txt";
- if(hora_dec==0.00)
- {cont++;
-  cuenta=0;
-  cuenta2=0;
-  filename=filename+cont+ext;                  //Gracias a este contador, se crear´ un archivo nuevo, numerado, cada nuevo dia que pase
-  filename.toCharArray(myfile,17);
-  File dataFile=SD.open(myfile, FILE_WRITE);  //Se abre la tarjeta SD para guardar todos los datos
-  if(dataFile)
-     {float Beta;
-      float Delta;
-      float angularss;
-      float EqT;
-      float Longitud;
-      float Latitud;
-      float eLongitud;
-      float eLatitud;
-      float eKmLong;
-      float eKmLat;
-      float epercLong;
-      float epercLat;
+    filename=filename+cont+ext;
+    filename.toCharArray(myfile,17);
+    File dataFile=SD.open(myfile, FILE_WRITE);    //Se abre la tarjeta SD para guardar todos los datos
+    if(dataFile)
+     {dataFile.print(hora_dec); 
+      dataFile.print("  ");  
+      dataFile.println(sensorval);  
+      Serial.print(hora_dec);
+      Serial.print("  ");
+      Serial.println(sensorval);
+      dataFile.close();
+     }
+    else
+     {Serial.println("Escritura Erronea...");} 
+   }
+  else
+   {filename="generic";
+    ext=".txt";
+    cont++;
+    cuenta=0;
+    cuenta2=0;
+    filename=filename+cont+ext;                  //Gracias a este contador, se crear´ un archivo nuevo, numerado, cada nuevo dia que pase
+    filename.toCharArray(myfile,17);
+    File dataFile=SD.open(myfile, FILE_WRITE);   
+    if(dataFile)
+     {
       Beta = anioFrac(xdias);
       Delta = sunDeclination(Beta);
       angularss = angularSunset(ss,midDay);
@@ -215,27 +231,9 @@ void loop()
     }
   else
     {Serial.println("Escritura erronea...");}
- }
- else
- {filename=filename+cont+ext;
-  filename.toCharArray(myfile,17);
-  File dataFile=SD.open(myfile, FILE_WRITE);
-  if(dataFile)
-   {dataFile.print(hora_dec); 
-    dataFile.print("  ");  
-    dataFile.println(sensorval);  
-    Serial.print(hora_dec);
-    Serial.print("  ");
-    Serial.println(sensorval);
-    dataFile.close();
-    }
-  else
-   {Serial.println("Escritura Erronea...");}
-}
+  }
  delay(2000);
 }
-
-
 
 float anioFrac(const unsigned int ndias){
    return 2*M_PI/365*(ndias);
